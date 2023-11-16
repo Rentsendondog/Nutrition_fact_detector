@@ -36,7 +36,7 @@ def detect(image, debug):
     coords = (xmin, ymin, xmax, ymax)
     cropped_image = crop(image, coords, "./data/result/output.jpg", 0, True)
     
-    scale_factor = 2
+    scale_factor = 1.7
     new_width = int(cropped_image.shape[1] * scale_factor)
     new_height = int(cropped_image.shape[0] * scale_factor)
     
@@ -44,10 +44,11 @@ def detect(image, debug):
     interpolation = cv2.INTER_LINEAR
 
     enlarged_img = cv2.resize(cropped_image, (new_width, new_height), interpolation=interpolation)
-    
-    
+    figure = plt.figure(figsize=(10, 18))
+    plt.subplot(1, 2, 1)
     detect_lines(enlarged_img, minLinLength=100, display=True, write = True)
-    
+    plt.title('Detected Lines')
+
     cv2.imwrite('./data/result/output-opt.png', enlarged_img)
     
     img = np.array(enlarged_img)
@@ -70,8 +71,15 @@ def detect(image, debug):
         # Add the text label above the bounding box
         cv2.putText(img, text, (top_left[0], top_left[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, font_size, (0, 0, 255), 2)  # Red text
 
-    
-    cv2.imshow('Image with Bounding Boxes', img)    
+    cv2.namedWindow('Image with Bounding Boxes', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('Image with Bounding Boxes', new_width, new_height)
+    cv2.imshow('Image with Bounding Boxes', img)
+    x, y, width, height = cv2.getWindowImageRect('Image with Bounding Boxes')
+    print(f"Current window size: {width} x {height}")
+    plt.subplot(1, 2, 2)
+    plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    plt.title('Detected Text with bounding boxes')    
+    plt.show()
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     return scores[0][0]

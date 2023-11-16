@@ -22,7 +22,7 @@ def detect_lines(image, title='default', rho = 1, theta = 2, threshold = 50, min
     # plt.title('Canny Edge Detection'), plt.xticks([]), plt.yticks([])
 
     # plt.show()
-    lines = cv.HoughLinesP(dst, 1, np.pi/180, threshold=80, minLineLength=80, maxLineGap=10)
+    lines = cv.HoughLinesP(dst, 1, np.pi/180, threshold=80, minLineLength=80, maxLineGap=9)
     
     for line in lines:
         x1, y1, x2, y2 = line[0]
@@ -31,6 +31,6 @@ def detect_lines(image, title='default', rho = 1, theta = 2, threshold = 50, min
     cv.imshow('Detected Lines', image)
     cv.waitKey(0)
     cv.destroyAllWindows()
-    
+    plt.imshow(cv.cvtColor(image, cv.COLOR_BGR2RGB))
     return 0
 
