@@ -46,85 +46,99 @@ def detect(image, debug):
 
     enlarged_img = cv2.resize(cropped_image, (new_width, new_height), interpolation=interpolation)
     # figure = plt.figure(figsize=(10, 14))
-    plt.subplot(1, 2, 1)
+    # plt.subplot(1, 2, 1)
     # detect_lines(enlarged_img, minLinLength=100, display=True, write = True)
-    plt.title('Detected Lines')
+    # plt.title('Detected Lines')
 
-    cv2.imwrite('./data/result/output-opt.png', enlarged_img)
+    # cv2.imwrite('./data/result/output-opt.png', enlarged_img)
     
     img = np.array(enlarged_img)
-    
+    # ocr хийсэн текстүүдийг хадгалах
     results = reader.readtext(img, detail=1)
-    # box_heights = []
-    # boxes = []
-    # info = []
+    # мөр бүрийн хувьд текстүүдийг нэгтгэн хадгалах dictionary
     rows = {}
+    # avg_line  - г хадгалах dictionary
+    rows_sup = {}
 
+    # дундаж шугам нь хайрцагыг огтлолцох эсэхийг шалгах
+    def inrow(avg_line, bbox):
+        if (avg_line >= min(bbox[0][1], bbox[1][1])) and (avg_line <= max(bbox[2][1], bbox[3][1])):
+            return True
+        return False
+
+    # Loop over all OCR results
     for (bbox, text, prob) in results:
-    # Use the vertical midpoint of the bounding box as a key for the row
-        print('bbox[1]', bbox[1], 'bbox[3]', bbox[3])
-        row_key = int((bbox[1][1] + bbox[3][1]) / 2)
+        avg_line = int((bbox[0][1] + bbox[2][1]) / 2)
 
-    # Create a new row dictionary if it doesn't exist
-        if row_key not in rows:
-            rows[row_key] = {'text': text, 'bbox': bbox}
+
+        if (avg_line not in rows) and (avg_line not in rows_sup) or (not inrow(avg_line, bbox)):
+            rows[avg_line] = {'text': text, 'bbox': bbox}
+            rows_sup[avg_line] = avg_line
         else:
-            # Concatenate the text if the row already exists
-            rows[row_key]['text'] += ' ' + text
-            # Update the bounding box to cover the entire row
-            rows[row_key]['bbox'] = (
-                min(rows[row_key]['bbox'][0], bbox[0]),
-                min(rows[row_key]['bbox'][1], bbox[1]),
-                max(rows[row_key]['bbox'][2], bbox[2]),
-                max(rows[row_key]['bbox'][3], bbox[3])
+            rows[avg_line]['text'] += ' ' + text
+            rows_sup[avg_line] = avg_line
+        
+            rows[avg_line]['bbox'] = (
+                min(rows[avg_line]['bbox'][0], bbox[0]),
+                min(rows[avg_line]['bbox'][1], bbox[1]),
+                max(rows[avg_line]['bbox'][2], bbox[2]),
+                max(rows[avg_line]['bbox'][3], bbox[3])
             )
+        # draw bounding box
+        cv2.rectangle(img, (int(rows[avg_line]['bbox'][0][0]), int(rows[avg_line]['bbox'][0][1])), (int(rows[avg_line]['bbox'][2][0]), int(rows[avg_line]['bbox'][2][1])), (0, 255, 0), 2)
 
     # Convert the dictionary of rows to a list
     rows_list = list(rows.values())
-    # top_left, bottom_right sorted
-    rows_list.sort(key=lambda r: (r['bbox'][0][0], r['bbox'][0][1], r['bbox'][2][1]), reverse=False)
+    # sort y, x
+    rows_list.sort(key=lambda r: (r['bbox'][0][1], r['bbox'][0][0]), reverse=False)
 
-    # Display the results
+    # Print the OCR results
     for row in rows_list:
         print(f"Row Text: {row['text']}")
         print(f"Row Bounding Box: {row['bbox']}")
         print()
 
-    for elm in rows_list:
-        avg_line = (elm['bbox'][1][1] + elm['bbox'][3][1]) / 2
-        if avg_line not in rows:
-            rows[avg_line] = {'text': elm['text'], 'bbox': elm['bbox']}
-
-        
         # Add the text label above the bounding box
         # cv2.putText(img, text, (top_left[0], top_left[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, font_size, (0, 0, 255), 2)  # Red text
 
-    # avg red line
-    # for box in boxes:
-    #     (top_left, bottom_right) = box
-    #     y = bottom_right - top_left / 2
-    #     x1 = 0
-    #     x2 = img.shape[1] - 10
-    #     # draw line
-    #     cv2.line(img, (x1, y), (x2, y), (255, 0, 0), 1)
-
-    key_dict = ['text1', 'text2', 'text3', 'text4']
-
+    # Гарж ирэх ёстой текстүүд
     item_list = [text for (bbox, text, prob) in results]
     print(item_list)
 
+    # Дундаж шугам нь хайрцаг бүрийн
+    for avg_line in rows_sup.values():
+        row = rows[avg_line]
+        cv2.line(img, (int(row['bbox'][0][0]), int(avg_line)), (int(new_width - 10), int(avg_line)), (255, 0, 255), 2)
 
+    # дундаж шугам бүрийн текстүүдийг нэгтгэх
+    info = []
+    for avg_line in rows_sup.values():
+        dict = {'txt': ''}
+        _r = {}
+        for (bbox, text, prob) in results:
+            if inrow(avg_line, bbox):
+                if _r is None:
+                    dict['txt'] = text
+                    _r[avg_line] = avg_line
+                else:
+                    dict['txt'] += "_"
+                    dict['txt'] += text
+                    _r[avg_line] = avg_line
+        info.append(dict)
 
+    print('---info---\n\n')
+    print(info)
+                    
 
     cv2.namedWindow('Image with Bounding Boxes', cv2.WINDOW_NORMAL)
     cv2.resizeWindow('Image with Bounding Boxes', new_width, new_height)
     cv2.imshow('Image with Bounding Boxes', img)
-    x, y, width, height = cv2.getWindowImageRect('Image with Bounding Boxes')
+    # x, y, width, height = cv2.getWindowImageRect('Image with Bounding Boxes')
     print(f"Current window size: {new_width} x {new_height}")
-    plt.subplot(1, 2, 2)
-    plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-    plt.title('Detected Text with bounding boxes')    
-    plt.show()
+    # plt.subplot(1, 2, 2)
+    # plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    # plt.title('Detected Text with bounding boxes')    
+    # plt.show()
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     return scores[0][0]
