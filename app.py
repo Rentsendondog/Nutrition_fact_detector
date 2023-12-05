@@ -57,7 +57,7 @@ def detect(image, debug):
 
     print(reader.readtext(img, detail=0))
     print("-----pytesseract---------------------")
-    pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
+
     d = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
     n_boxes = len(d["level"])
     word_boxes = []
@@ -104,7 +104,6 @@ def detect(image, debug):
 
 @app.route("/upload", methods=["POST"])
 def upload_file():
-    pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
     print(pytesseract.get_languages(config=""))
     if "image" not in request.files:
         return "No photo part in the request"
